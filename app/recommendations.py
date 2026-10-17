@@ -3,6 +3,8 @@ from app.models import Recommendation, ResourceMetric
 def build_recommendations(resources: list[ResourceMetric]) -> list[Recommendation]:
     recommendations: list[Recommendation] = []
     for resource in resources:
+        if resource.monthly_cost == 0:
+            continue
         if resource.resource_type == "ec2" and resource.cpu_utilization_pct is not None:
             if resource.cpu_utilization_pct < 10:
                 savings = round(resource.monthly_cost * 0.60, 2)
@@ -30,3 +32,4 @@ def build_recommendations(resources: list[ResourceMetric]) -> list[Recommendatio
             ))
     rank = {"high": 0, "medium": 1, "low": 2}
     return sorted(recommendations, key=lambda item: (rank[item.priority], -item.estimated_monthly_savings))
+

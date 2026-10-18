@@ -31,5 +31,5 @@ def build_recommendations(resources: list[ResourceMetric]) -> list[Recommendatio
                 estimated_monthly_savings=savings, priority="medium", confidence=0.78,
             ))
     rank = {"high": 0, "medium": 1, "low": 2}
-    return sorted(recommendations, key=lambda item: (rank[item.priority], -item.estimated_monthly_savings))
+    return sorted((item for item in recommendations if item.estimated_monthly_savings > 0), key=lambda item: (rank[item.priority], -item.estimated_monthly_savings))
 

@@ -1,3 +1,4 @@
+from decimal import Decimal
 from datetime import date
 import boto3
 from app.config import get_settings
@@ -17,21 +18,26 @@ class AWSDataProvider:
         if start == end:
             return []
         client = boto3.client("ce", region_name=self.settings.aws_region)
-        response = client.get_cost_and_usage(
+        request = dict(
             TimePeriod={"Start": start, "End": end},
             Granularity="MONTHLY",
             Metrics=["UnblendedCost"],
             GroupBy=[{"Type": "DIMENSION", "Key": "SERVICE"}],
         )
-        costs: list[ServiceCost] = []
-        for period in response.get("ResultsByTime", []):
-            for group in period.get("Groups", []):
-                metric = group["Metrics"]["UnblendedCost"]
-                costs.append(ServiceCost(
-                    service=group["Keys"][0],
-                    amount=round(float(metric["Amount"]), 2),
-                    currency=metric["Unit"],
-                ))
+        totals = {}
+        while True:
+            response = client.get_cost_and_usage(**request)
+            for period in response.get("ResultsByTime", []):
+                for group in period.get("Groups", []):
+                    metric = group["Metrics"]["UnblendedCost"]
+                    key = (group["Keys"][0], metric["Unit"])
+                    totals[key] = totals.get(key, 0) + Decimal(metric["Amount"])
+            token = response.get("NextPageToken")
+            if not token:
+                break
+            request["NextPageToken"] = token
+        costs = [ServiceCost(service=service, amount=float(round(amount, 2)), currency=unit)
+                 for (service, unit), amount in totals.items()]
         return sorted(costs, key=lambda item: item.amount, reverse=True)
 
     def get_resource_metrics(self) -> list[ResourceMetric]:

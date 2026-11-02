@@ -25,6 +25,7 @@ class AWSDataProvider:
             GroupBy=[{"Type": "DIMENSION", "Key": "SERVICE"}],
         )
         totals = {}
+        seen_tokens = set()
         while True:
             response = client.get_cost_and_usage(**request)
             for period in response.get("ResultsByTime", []):
@@ -35,6 +36,9 @@ class AWSDataProvider:
             token = response.get("NextPageToken")
             if not token:
                 break
+            if token in seen_tokens:
+                raise ValueError("Cost Explorer pagination returned a repeated token.")
+            seen_tokens.add(token)
             request["NextPageToken"] = token
         costs = [ServiceCost(service=service, amount=float(round(amount, 2)), currency=unit)
                  for (service, unit), amount in totals.items()]

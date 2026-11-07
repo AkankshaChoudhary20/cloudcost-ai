@@ -11,7 +11,7 @@ class AWSDataProvider:
 
     def get_monthly_costs(self) -> list[ServiceCost]:
         if self.settings.use_mock_data:
-            return MOCK_COSTS
+            return [cost.model_copy(deep=True) for cost in MOCK_COSTS]
         today = date.today()
         start = today.replace(day=1).isoformat()
         end = today.isoformat()
@@ -47,4 +47,4 @@ class AWSDataProvider:
     def get_resource_metrics(self) -> list[ResourceMetric]:
         # v1 uses deterministic resource metrics. The interface is intentionally
         # isolated so CloudWatch/EC2/EBS collectors can replace this implementation.
-        return MOCK_RESOURCES
+        return [resource.model_copy(deep=True) for resource in MOCK_RESOURCES]
